@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Market Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .scrollbar-hidden::-webkit-scrollbar { display: none; }
+    .scrollbar-hidden { scrollbar-width: none; -ms-overflow-style: none; }
+    .selected { background-color: #e2e8f0; }
+  </style>
+</head>
+<body class="bg-gray-100">
+
+<div class="min-h-screen flex">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-64 bg-white shadow-lg p-4 overflow-y-auto scrollbar-hidden">
+    <h1 class="text-2xl font-bold mb-4">Stock Dashboard</h1>
+    <ul id="company-list" class="space-y-2"></ul>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 p-6">
+    <div id="stock-header" class="mb-4"></div>
+    <canvas id="stock-chart" height="100"></canvas>
+    <div id="info-cards" class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+  </main>
+</div>
+
+<script>
+  function generateMockData(days) {
+    const data = [];
+    let price = 100 + Math.random() * 50;
+    const today = new Date();
+    for (let i = days; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      price += (Math.random() - 0.5) * 5;
+      data.push({
+        date: date.toISOString().slice(0, 10),
+        open: +(price + (Math.random() - 0.5) * 2).toFixed(2),
+        high: +(price + Math.random() * 2).toFixed(2),
+        low: +(price - Math.random() * 2).toFixed(2),
+        close: +price.toFixed(2),
+        volume: Math.floor(1e6 + Math.random() * 5e6)
+      });
+    }
+    return data;
+  }
+
+  const mockCompanies = [
+    { id: 'AAPL', name: 'Apple Inc.', data: generateMockData(30) },
+    { id: 'MSFT', name: 'Microsoft Corp.', data: generateMockData(30) },
+    { id: 'TSLA', name: 'Tesla Inc.', data: generateMockData(30) },
+    { id: 'AMZN', name: 'Amazon.com', data: generateMockData(30) },
+    { id: 'GOOG', name: 'Alphabet Inc.', data: generateMockData(30) },
+    { id: 'META', name: 'Meta Platforms', data: generateMockData(30) },
+    { id: 'NVDA', name: 'NVIDIA Corp.', data: generateMockData(30) },
+    { id: 'NFLX', name: 'Netflix Inc.', data: generateMockData(30) },
+    { id: 'INTC', name: 'Intel Corp.', data: generateMockData(30) },
+    { id: 'AMD', name: 'AMD Inc.', data: generateMockData(30) }
+  ];
+
+  let selectedCompany = mockCompanies[0];
+  let stockChart;
+
+  function renderCompanyList() {
+    const list = document.getElementById('company-list');
+    list.innerHTML = '';
+    mockCompanies.forEach(c => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'w-full text-left p-2 rounded hover:bg-gray-200';
+      btn.textContent = c.name;
+      btn.onclick = () => {
+        selectedCompany = c;
+        updateUI();
+      };
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  function updateUI() {
+    // Header
+    const latest = selectedCompany.data[selectedCompany.data.length - 1];
+    const prev = selectedCompany.data[selectedCompany.data.length - 2];
+    const change = (latest.close - prev.close).toFixed(2);
+    const percent = ((change / prev.close) * 100).toFixed(2);
+    document.getElementById('stock-header').innerHTML =
+      `<h2 class="text-2xl font-bold">${selectedCompany.name} (${selectedCompany.id})</h2>
+       <p class="${change >= 0 ? 'text-green-600' : 'text-red-600'}">
+         ${change >= 0 ? '▲' : '▼'} ${change} (${percent}%)
+       </p>`;
+
+    // Info cards
+    document.getElementById('info-cards').innerHTML = `
+      <div class="bg-white p-4 rounded shadow">Open: $${latest.open}</div>
+      <div class="bg-white p-4 rounded shadow">High: $${latest.high}</div>
+      <div class="bg-white p-4 rounded shadow">Low: $${latest.low}</div>
+      <div class="bg-white p-4 rounded shadow">Volume: ${latest.volume.toLocaleString()}</div>
+    `;
+
+    // Chart
+    const labels = selectedCompany.data.map(d => d.date);
+    const prices = selectedCompany.data.map(d => d.close);
+    if (stockChart) {
+      stockChart.data.labels = labels;
+      stockChart.data.datasets[0].data = prices;
+      stockChart.update();
+    } else {
+      const ctx = document.getElementById('stock-chart').getContext('2d');
+      stockChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Close Price',
+            data: prices,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.1)',
+            fill: true
+          }]
+        }
+      });
+    }
+  }
+
+  renderCompanyList();
+  updateUI();
+</script>
+
+</body>
+</html>
